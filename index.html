@@ -10,6 +10,8 @@
     h1{margin:0 0 12px 0;}
     p{margin:8px 0;}
     .timer{font-size:18px;color:#374151;}
+    .question{font-size:18px;min-height:48px;color:#2563eb;font-weight:500;} /* blue */
+    .answer{font-size:18px;color:#16a34a;font-weight:600;} /* green */
     button{padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600;}
     .primary{background:#6366f1;color:#fff;margin:8px;}
     .outline{background:transparent;border:1px solid #e5e7eb;color:#374151;margin:8px;}
@@ -35,6 +37,15 @@
       { q: "I go up but never come down.", a: "Age 🎂" }
     ];
 
+    function normalizeText(text){
+      if(!text) return "";
+      let t = text.toLowerCase();
+      t = t.replace(/[^a-z\s]/g, '');
+      t = t.replace(/\b(a|an|the)\b/g, '');
+      t = t.replace(/\s+/g, ' ').trim();
+      return t;
+    }
+
     function App(){
       const [index,setIndex] = useState(0);
       const [timeLeft,setTimeLeft] = useState(20);
@@ -42,7 +53,6 @@
       const [result,setResult] = useState(null);
       const [showAnswer,setShowAnswer] = useState(false);
 
-      // reset when moving to new riddle
       useEffect(()=>{
         setTimeLeft(20);
         setUserAnswer("");
@@ -50,7 +60,6 @@
         setShowAnswer(false);
       },[index]);
 
-      // countdown
       useEffect(()=>{
         if(showAnswer) return;
         if(timeLeft <= 0){
@@ -64,13 +73,10 @@
 
       const submitAnswer = () => {
         if(showAnswer) return;
-        const correct = riddles[index].a.toLowerCase().replace(/[^a-z]/g,"").trim();
-        const guess = userAnswer.toLowerCase().replace(/[^a-z]/g,"").trim();
-        if(guess && guess === correct){
-          setResult("correct");
-        } else {
-          setResult("wrong");
-        }
+        const correct = normalizeText(riddles[index].a);
+        const guess = normalizeText(userAnswer);
+        const matched = (guess && (guess === correct || correct.includes(guess) || guess.includes(correct)));
+        setResult(matched ? "correct" : "wrong");
         setShowAnswer(true);
       };
 
@@ -83,12 +89,12 @@
 
       const next = () => setIndex(i => (i + 1) % riddles.length);
       const prev = () => setIndex(i => (i - 1 + riddles.length) % riddles.length);
-      const reset = () => setIndex(0);
+      const reset = () => { setIndex(0); setTimeLeft(20); setUserAnswer(""); setResult(null); setShowAnswer(false); };
 
       return (
         <div className="card">
           <h1>🧩 Riddle Game</h1>
-          <p style={{fontSize:18, minHeight:48}}>{riddles[index].q}</p>
+          <p className="question">{riddles[index].q}</p>
           <div className="timer">Time left: <strong>{timeLeft}s</strong></div>
 
           {!showAnswer ? (
@@ -98,6 +104,7 @@
                 value={userAnswer}
                 onChange={(e)=>setUserAnswer(e.target.value)}
                 placeholder="Type your answer..."
+                onKeyDown={(e)=>{ if(e.key === 'Enter') submitAnswer(); }}
               />
               <div>
                 <button className="primary" onClick={submitAnswer}>Submit</button>
@@ -111,7 +118,7 @@
               {result==="wrong" && <p style={{color:"#ef4444", fontWeight:600}}>❌ Wrong</p>}
               {result==="timeout" && <p style={{color:"#f59e0b", fontWeight:600}}>⏰ Time’s up!</p>}
               {result==="revealed" && <p style={{color:"#3b82f6", fontWeight:600}}>👀 Revealed</p>}
-              <p style={{fontSize:18}}>Answer: {riddles[index].a}</p>
+              <p className="answer">Answer: {riddles[index].a}</p>
               <button className="primary" onClick={next}>Next ➡️</button>
             </div>
           )}
