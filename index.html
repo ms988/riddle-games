@@ -52,8 +52,14 @@
       const [userAnswer,setUserAnswer] = useState("");
       const [result,setResult] = useState(null);
       const [showAnswer,setShowAnswer] = useState(false);
+      const [score,setScore] = useState(0);
+      const [attempts,setAttempts] = useState(0);
+      const [finished,setFinished] = useState(false);
+
+      const total = riddles.length;
 
       useEffect(()=>{
+        if(finished) return;
         setTimeLeft(20);
         setUserAnswer("");
         setResult(null);
@@ -61,41 +67,79 @@
       },[index]);
 
       useEffect(()=>{
-        if(showAnswer) return;
+        if(finished || showAnswer) return;
         if(timeLeft <= 0){
           setResult("timeout");
           setShowAnswer(true);
+          setAttempts(a => a+1);
           return;
         }
         const id = setInterval(()=> setTimeLeft(t => t - 1), 1000);
         return ()=> clearInterval(id);
-      },[timeLeft, showAnswer]);
+      },[timeLeft, showAnswer, finished]);
 
       const submitAnswer = () => {
-        if(showAnswer) return;
+        if(showAnswer || finished) return;
         const correct = normalizeText(riddles[index].a);
         const guess = normalizeText(userAnswer);
         const matched = (guess && (guess === correct || correct.includes(guess) || guess.includes(correct)));
         setResult(matched ? "correct" : "wrong");
         setShowAnswer(true);
+        setAttempts(a => a+1);
+        if(matched) setScore(s => s+1);
       };
 
       const revealAnswer = () => {
-        if(!showAnswer){
+        if(!showAnswer && !finished){
           setResult("revealed");
           setShowAnswer(true);
+          setAttempts(a => a+1);
         }
       };
 
-      const next = () => setIndex(i => (i + 1) % riddles.length);
-      const prev = () => setIndex(i => (i - 1 + riddles.length) % riddles.length);
-      const reset = () => { setIndex(0); setTimeLeft(20); setUserAnswer(""); setResult(null); setShowAnswer(false); };
+      const next = () => {
+        if(index === total - 1){
+          setFinished(true);
+        } else {
+          setIndex(i => i + 1);
+        }
+      };
+
+      const reset = () => { 
+        setIndex(0); 
+        setTimeLeft(20); 
+        setUserAnswer(""); 
+        setResult(null); 
+        setShowAnswer(false); 
+        setScore(0); 
+        setAttempts(0);
+        setFinished(false);
+      };
+
+      if(finished){
+        const percent = Math.round((score/total)*100);
+        let message = "💡 Try again, you’ll get better!";
+        if(percent >= 80) message = "🎉 Great job!";
+        else if(percent >= 50) message = "🙂 Not bad, keep practicing!";
+
+        return (
+          <div className="card">
+            <h1>🏆 Game Over</h1>
+            <p style={{fontSize:"20px",fontWeight:600}}>Final Score: {score}/{total} ({percent}%)</p>
+            <p style={{fontSize:"18px"}}>{message}</p>
+            <button className="primary" onClick={reset}>🔄 Play Again</button>
+          </div>
+        );
+      }
 
       return (
         <div className="card">
           <h1>🧩 Riddle Game</h1>
           <p className="question">{riddles[index].q}</p>
           <div className="timer">Time left: <strong>{timeLeft}s</strong></div>
+          <div style={{margin:"8px 0", fontWeight:600, color:"#374151"}}>
+            Score: {score}/{attempts}
+          </div>
 
           {!showAnswer ? (
             <div>
@@ -119,13 +163,15 @@
               {result==="timeout" && <p style={{color:"#f59e0b", fontWeight:600}}>⏰ Time’s up!</p>}
               {result==="revealed" && <p style={{color:"#3b82f6", fontWeight:600}}>👀 Revealed</p>}
               <p className="answer">Answer: {riddles[index].a}</p>
-              <button className="primary" onClick={next}>Next ➡️</button>
+              <button className="primary" onClick={next}>
+                {index === total - 1 ? "Finish 🏁" : "Next ➡️"}
+              </button>
             </div>
           )}
 
           <div style={{marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <button className="outline" onClick={prev}>⬅ Prev</button>
-            <div style={{opacity:0.7}}>Riddle {index+1}/{riddles.length}</div>
+            <button className="outline" onClick={()=>setIndex(i => (i - 1 + total) % total)}>⬅ Prev</button>
+            <div style={{opacity:0.7}}>Riddle {index+1}/{total}</div>
             <button className="outline" onClick={reset}>🔄 Reset</button>
           </div>
         </div>
