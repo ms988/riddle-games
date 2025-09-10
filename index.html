@@ -9,8 +9,8 @@
       font-family: Arial, sans-serif;
       text-align: center;
       margin: 40px;
-      background: url('https://www.transparenttextures.com/patterns/cubes.png'); /* light background pattern */
-      background-color: #f0f8ff; /* fallback soft blue */
+      background: url('https://www.transparenttextures.com/patterns/cubes.png');
+      background-color: #f0f8ff;
     }
     #question {
       font-size: 20px;
@@ -22,7 +22,7 @@
       color: green;
       margin-top: 10px;
     }
-    #score {
+    #score, #timer {
       font-size: 18px;
       margin-top: 20px;
     }
@@ -61,6 +61,7 @@
     <button onclick="nextRiddle()">Next</button>
     <button onclick="resetGame()">Reset</button>
     <div id="answer"></div>
+    <div id="timer"></div>
     <div id="score"></div>
     <div id="final"></div>
   </div>
@@ -77,6 +78,8 @@
     let shuffled = [];
     let current = 0;
     let score = 0;
+    let timer;
+    let timeLeft = 15;
 
     function shuffle(array) {
       let newArr = [...array];
@@ -87,20 +90,48 @@
       return newArr;
     }
 
+    function normalize(text) {
+      return text
+        .toLowerCase()
+        .trim()
+        .replace(/^(a |an |the )/, "")
+        .replace(/[.,!?;:]/g, "")
+        .replace(/s$/, "");
+    }
+
+    function startTimer() {
+      clearInterval(timer);
+      timeLeft = 15;
+      document.getElementById("timer").innerText = `⏳ Time left: ${timeLeft}s`;
+      timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").innerText = `⏳ Time left: ${timeLeft}s`;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          document.getElementById("answer").innerText = "⏰ Time's up! The answer is: " + shuffled[current].a;
+          document.getElementById("score").innerText = `Score: ${score}/${current + 1}`;
+        }
+      }, 1000);
+    }
+
     function loadRiddle() {
       if (current < shuffled.length) {
         document.getElementById("question").innerText = shuffled[current].q;
         document.getElementById("answer").innerText = "";
         document.getElementById("userInput").value = "";
         document.getElementById("final").innerText = "";
+        startTimer();
       } else {
         showFinal();
       }
     }
 
     function checkAnswer() {
-      let input = document.getElementById("userInput").value.trim().toLowerCase();
-      if (input === shuffled[current].a) {
+      clearInterval(timer);
+      let input = normalize(document.getElementById("userInput").value);
+      let answer = normalize(shuffled[current].a);
+
+      if (input === answer) {
         score++;
         document.getElementById("answer").innerText = "✅ Correct!";
       } else {
@@ -110,6 +141,7 @@
     }
 
     function nextRiddle() {
+      clearInterval(timer);
       current++;
       loadRiddle();
     }
@@ -124,6 +156,8 @@
     }
 
     function showFinal() {
+      clearInterval(timer);
+      document.getElementById("timer").innerText = "";
       let percent = (score / riddles.length) * 100;
       let message = percent >= 80 ? "🎉 Great job!" :
                     percent >= 50 ? "🙂 Not bad, keep practicing!" :
@@ -131,7 +165,7 @@
       document.getElementById("final").innerText = `Game Over! You scored ${score}/${riddles.length} (${percent}%). ${message}`;
     }
 
-    resetGame(); // Start game with shuffled riddles
+    resetGame(); // Start game
   </script>
 
 </body>
