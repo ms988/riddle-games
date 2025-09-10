@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Riddle Timer Game</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body{font-family:system-ui, Arial; background:linear-gradient(135deg,#dbeafe,#fbcfe8);min-height:100vh;margin:0;display:flex;align-items:center;justify-content:center;}
+    .card{width:400px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.12);padding:20px;text-align:center;}
+    h1{margin:0 0 12px 0;}
+    p{margin:8px 0;}
+    .timer{font-size:18px;color:#374151;}
+    button{padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600;}
+    .primary{background:#6366f1;color:#fff;margin:8px;}
+    .outline{background:transparent;border:1px solid #e5e7eb;color:#374151;margin:8px;}
+    input{padding:8px;width:80%;border-radius:8px;border:1px solid #d1d5db;margin-top:10px;}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React + ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const riddles = [
+      { q: "I’m full of holes but I can hold water.", a: "A sponge 🧽" },
+      { q: "The more you take away from me, the bigger I get.", a: "A hole ⚫" },
+      { q: "I have keys but no doors. I can be played but not opened.", a: "A piano 🎹" },
+      { q: "I’m always moving but never have legs.", a: "A river 🌊" },
+      { q: "I go up but never come down.", a: "Age 🎂" }
+    ];
+
+    function App(){
+      const [index,setIndex] = useState(0);
+      const [timeLeft,setTimeLeft] = useState(20);
+      const [userAnswer,setUserAnswer] = useState("");
+      const [result,setResult] = useState(null);
+      const [showAnswer,setShowAnswer] = useState(false);
+
+      // reset when moving to new riddle
+      useEffect(()=>{
+        setTimeLeft(20);
+        setUserAnswer("");
+        setResult(null);
+        setShowAnswer(false);
+      },[index]);
+
+      // countdown
+      useEffect(()=>{
+        if(showAnswer) return;
+        if(timeLeft <= 0){
+          setResult("timeout");
+          setShowAnswer(true);
+          return;
+        }
+        const id = setInterval(()=> setTimeLeft(t => t - 1), 1000);
+        return ()=> clearInterval(id);
+      },[timeLeft, showAnswer]);
+
+      const submitAnswer = () => {
+        if(showAnswer) return;
+        const correct = riddles[index].a.toLowerCase().replace(/[^a-z]/g,"").trim();
+        const guess = userAnswer.toLowerCase().replace(/[^a-z]/g,"").trim();
+        if(guess && guess === correct){
+          setResult("correct");
+        } else {
+          setResult("wrong");
+        }
+        setShowAnswer(true);
+      };
+
+      const revealAnswer = () => {
+        if(!showAnswer){
+          setResult("revealed");
+          setShowAnswer(true);
+        }
+      };
+
+      const next = () => setIndex(i => (i + 1) % riddles.length);
+      const prev = () => setIndex(i => (i - 1 + riddles.length) % riddles.length);
+      const reset = () => setIndex(0);
+
+      return (
+        <div className="card">
+          <h1>🧩 Riddle Game</h1>
+          <p style={{fontSize:18, minHeight:48}}>{riddles[index].q}</p>
+          <div className="timer">Time left: <strong>{timeLeft}s</strong></div>
+
+          {!showAnswer ? (
+            <div>
+              <input
+                type="text"
+                value={userAnswer}
+                onChange={(e)=>setUserAnswer(e.target.value)}
+                placeholder="Type your answer..."
+              />
+              <div>
+                <button className="primary" onClick={submitAnswer}>Submit</button>
+                <button className="outline" onClick={revealAnswer}>Show Answer</button>
+                <button className="outline" onClick={next}>Skip ▶</button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              {result==="correct" && <p style={{color:"#10b981", fontWeight:600}}>✅ Correct!</p>}
+              {result==="wrong" && <p style={{color:"#ef4444", fontWeight:600}}>❌ Wrong</p>}
+              {result==="timeout" && <p style={{color:"#f59e0b", fontWeight:600}}>⏰ Time’s up!</p>}
+              {result==="revealed" && <p style={{color:"#3b82f6", fontWeight:600}}>👀 Revealed</p>}
+              <p style={{fontSize:18}}>Answer: {riddles[index].a}</p>
+              <button className="primary" onClick={next}>Next ➡️</button>
+            </div>
+          )}
+
+          <div style={{marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+            <button className="outline" onClick={prev}>⬅ Prev</button>
+            <div style={{opacity:0.7}}>Riddle {index+1}/{riddles.length}</div>
+            <button className="outline" onClick={reset}>🔄 Reset</button>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
