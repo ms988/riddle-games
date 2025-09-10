@@ -1,185 +1,138 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Riddle Timer Game</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Riddle Game</title>
   <style>
-    body{font-family:system-ui, Arial; background:linear-gradient(135deg,#dbeafe,#fbcfe8);min-height:100vh;margin:0;display:flex;align-items:center;justify-content:center;}
-    .card{width:400px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.12);padding:20px;text-align:center;}
-    h1{margin:0 0 12px 0;}
-    p{margin:8px 0;}
-    .timer{font-size:18px;color:#374151;}
-    .question{font-size:18px;min-height:48px;color:#2563eb;font-weight:500;} /* blue */
-    .answer{font-size:18px;color:#16a34a;font-weight:600;} /* green */
-    button{padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600;}
-    .primary{background:#6366f1;color:#fff;margin:8px;}
-    .outline{background:transparent;border:1px solid #e5e7eb;color:#374151;margin:8px;}
-    input{padding:8px;width:80%;border-radius:8px;border:1px solid #d1d5db;margin-top:10px;}
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 40px;
+      background: url('https://www.transparenttextures.com/patterns/cubes.png'); /* light background pattern */
+      background-color: #f0f8ff; /* fallback soft blue */
+    }
+    #question {
+      font-size: 20px;
+      color: blue;
+      margin-bottom: 20px;
+    }
+    #answer {
+      font-size: 18px;
+      color: green;
+      margin-top: 10px;
+    }
+    #score {
+      font-size: 18px;
+      margin-top: 20px;
+    }
+    #final {
+      font-size: 22px;
+      margin-top: 30px;
+      font-weight: bold;
+    }
+    input {
+      padding: 8px;
+      width: 200px;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 15px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
   </style>
 </head>
 <body>
-  <div id="root"></div>
 
-  <!-- React + ReactDOM -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <h1>🧩 Riddle Challenge</h1>
+  <div id="game">
+    <div id="question"></div>
+    <input type="text" id="userInput" placeholder="Type your answer">
+    <br>
+    <button onclick="checkAnswer()">Submit</button>
+    <button onclick="nextRiddle()">Next</button>
+    <button onclick="resetGame()">Reset</button>
+    <div id="answer"></div>
+    <div id="score"></div>
+    <div id="final"></div>
+  </div>
 
-  <script type="text/babel">
-    const { useState, useEffect } = React;
-
+  <script>
     const riddles = [
-      { q: "I’m full of holes but I can hold water.", a: "A sponge 🧽" },
-      { q: "The more you take away from me, the bigger I get.", a: "A hole ⚫" },
-      { q: "I have keys but no doors. I can be played but not opened.", a: "A piano 🎹" },
-      { q: "I’m always moving but never have legs.", a: "A river 🌊" },
-      { q: "I go up but never come down.", a: "Age 🎂" }
+      { q: "What has to be broken before you can use it?", a: "egg" },
+      { q: "I’m tall when I’m young, and short when I’m old. What am I?", a: "candle" },
+      { q: "What is full of holes but still holds water?", a: "sponge" },
+      { q: "What question can you never answer yes to?", a: "are you asleep" },
+      { q: "What gets wetter as it dries?", a: "towel" }
     ];
 
-    function normalizeText(text){
-      if(!text) return "";
-      let t = text.toLowerCase();
-      t = t.replace(/[^a-z\s]/g, '');
-      t = t.replace(/\b(a|an|the)\b/g, '');
-      t = t.replace(/\s+/g, ' ').trim();
-      return t;
-    }
+    let shuffled = [];
+    let current = 0;
+    let score = 0;
 
-    function App(){
-      const [index,setIndex] = useState(0);
-      const [timeLeft,setTimeLeft] = useState(20);
-      const [userAnswer,setUserAnswer] = useState("");
-      const [result,setResult] = useState(null);
-      const [showAnswer,setShowAnswer] = useState(false);
-      const [score,setScore] = useState(0);
-      const [attempts,setAttempts] = useState(0);
-      const [finished,setFinished] = useState(false);
-
-      const total = riddles.length;
-
-      useEffect(()=>{
-        if(finished) return;
-        setTimeLeft(20);
-        setUserAnswer("");
-        setResult(null);
-        setShowAnswer(false);
-      },[index]);
-
-      useEffect(()=>{
-        if(finished || showAnswer) return;
-        if(timeLeft <= 0){
-          setResult("timeout");
-          setShowAnswer(true);
-          setAttempts(a => a+1);
-          return;
-        }
-        const id = setInterval(()=> setTimeLeft(t => t - 1), 1000);
-        return ()=> clearInterval(id);
-      },[timeLeft, showAnswer, finished]);
-
-      const submitAnswer = () => {
-        if(showAnswer || finished) return;
-        const correct = normalizeText(riddles[index].a);
-        const guess = normalizeText(userAnswer);
-        const matched = (guess && (guess === correct || correct.includes(guess) || guess.includes(correct)));
-        setResult(matched ? "correct" : "wrong");
-        setShowAnswer(true);
-        setAttempts(a => a+1);
-        if(matched) setScore(s => s+1);
-      };
-
-      const revealAnswer = () => {
-        if(!showAnswer && !finished){
-          setResult("revealed");
-          setShowAnswer(true);
-          setAttempts(a => a+1);
-        }
-      };
-
-      const next = () => {
-        if(index === total - 1){
-          setFinished(true);
-        } else {
-          setIndex(i => i + 1);
-        }
-      };
-
-      const reset = () => { 
-        setIndex(0); 
-        setTimeLeft(20); 
-        setUserAnswer(""); 
-        setResult(null); 
-        setShowAnswer(false); 
-        setScore(0); 
-        setAttempts(0);
-        setFinished(false);
-      };
-
-      if(finished){
-        const percent = Math.round((score/total)*100);
-        let message = "💡 Try again, you’ll get better!";
-        if(percent >= 80) message = "🎉 Great job!";
-        else if(percent >= 50) message = "🙂 Not bad, keep practicing!";
-
-        return (
-          <div className="card">
-            <h1>🏆 Game Over</h1>
-            <p style={{fontSize:"20px",fontWeight:600}}>Final Score: {score}/{total} ({percent}%)</p>
-            <p style={{fontSize:"18px"}}>{message}</p>
-            <button className="primary" onClick={reset}>🔄 Play Again</button>
-          </div>
-        );
+    function shuffle(array) {
+      let newArr = [...array];
+      for (let i = newArr.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
       }
-
-      return (
-        <div className="card">
-          <h1>🧩 Riddle Game</h1>
-          <p className="question">{riddles[index].q}</p>
-          <div className="timer">Time left: <strong>{timeLeft}s</strong></div>
-          <div style={{margin:"8px 0", fontWeight:600, color:"#374151"}}>
-            Score: {score}/{attempts}
-          </div>
-
-          {!showAnswer ? (
-            <div>
-              <input
-                type="text"
-                value={userAnswer}
-                onChange={(e)=>setUserAnswer(e.target.value)}
-                placeholder="Type your answer..."
-                onKeyDown={(e)=>{ if(e.key === 'Enter') submitAnswer(); }}
-              />
-              <div>
-                <button className="primary" onClick={submitAnswer}>Submit</button>
-                <button className="outline" onClick={revealAnswer}>Show Answer</button>
-                <button className="outline" onClick={next}>Skip ▶</button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              {result==="correct" && <p style={{color:"#10b981", fontWeight:600}}>✅ Correct!</p>}
-              {result==="wrong" && <p style={{color:"#ef4444", fontWeight:600}}>❌ Wrong</p>}
-              {result==="timeout" && <p style={{color:"#f59e0b", fontWeight:600}}>⏰ Time’s up!</p>}
-              {result==="revealed" && <p style={{color:"#3b82f6", fontWeight:600}}>👀 Revealed</p>}
-              <p className="answer">Answer: {riddles[index].a}</p>
-              <button className="primary" onClick={next}>
-                {index === total - 1 ? "Finish 🏁" : "Next ➡️"}
-              </button>
-            </div>
-          )}
-
-          <div style={{marginTop:12, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <button className="outline" onClick={()=>setIndex(i => (i - 1 + total) % total)}>⬅ Prev</button>
-            <div style={{opacity:0.7}}>Riddle {index+1}/{total}</div>
-            <button className="outline" onClick={reset}>🔄 Reset</button>
-          </div>
-        </div>
-      );
+      return newArr;
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    function loadRiddle() {
+      if (current < shuffled.length) {
+        document.getElementById("question").innerText = shuffled[current].q;
+        document.getElementById("answer").innerText = "";
+        document.getElementById("userInput").value = "";
+        document.getElementById("final").innerText = "";
+      } else {
+        showFinal();
+      }
+    }
+
+    function checkAnswer() {
+      let input = document.getElementById("userInput").value.trim().toLowerCase();
+      if (input === shuffled[current].a) {
+        score++;
+        document.getElementById("answer").innerText = "✅ Correct!";
+      } else {
+        document.getElementById("answer").innerText = "❌ Wrong! The answer is: " + shuffled[current].a;
+      }
+      document.getElementById("score").innerText = `Score: ${score}/${current + 1}`;
+    }
+
+    function nextRiddle() {
+      current++;
+      loadRiddle();
+    }
+
+    function resetGame() {
+      shuffled = shuffle(riddles);
+      current = 0;
+      score = 0;
+      document.getElementById("score").innerText = "";
+      document.getElementById("final").innerText = "";
+      loadRiddle();
+    }
+
+    function showFinal() {
+      let percent = (score / riddles.length) * 100;
+      let message = percent >= 80 ? "🎉 Great job!" :
+                    percent >= 50 ? "🙂 Not bad, keep practicing!" :
+                    "💡 Try again, you’ll get better!";
+      document.getElementById("final").innerText = `Game Over! You scored ${score}/${riddles.length} (${percent}%). ${message}`;
+    }
+
+    resetGame(); // Start game with shuffled riddles
   </script>
+
 </body>
 </html>
